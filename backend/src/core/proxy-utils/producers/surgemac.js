@@ -11,31 +11,22 @@ const surge_Producer = Surge_Producer();
 
 export default function SurgeMac_Producer() {
     const produce = (proxy, type, opts = {}) => {
+        // 总是默认使用mihomo
+        opts.useMihomoExternal = true;
+        
         switch (proxy.type) {
             case 'external':
                 return external(proxy);
-            // case 'ssr':
-            //     return shadowsocksr(proxy);
             default: {
-                try {
-                    return surge_Producer.produce(proxy, type, opts);
-                } catch (e) {
-                    if (opts.useMihomoExternal) {
-                        $.log(
-                            `${proxy.name} is not supported on ${targetPlatform}, try to use Mihomo(SurgeMac - External Proxy Program) instead`,
-                        );
-                        return mihomo(proxy, type, opts);
-                    } else {
-                        throw new Error(
-                            `Surge for macOS 可手动指定链接参数 target=SurgeMac 或在 同步配置 中指定 SurgeMac 来启用 mihomo 支援 Surge 本身不支持的协议`,
-                        );
-                    }
-                }
+                // SurgeMac平台完全使用mihomo作为外部代理处理所有协议
+                $.info(`Using mihomo for ${proxy.name} (${proxy.type})`);
+                return mihomo(proxy, type, opts);
             }
         }
     };
     return { produce };
 }
+
 function external(proxy) {
     const result = new Result(proxy);
     if (!proxy.exec || !proxy['local-port']) {
@@ -76,49 +67,7 @@ function external(proxy) {
 
     return result.toString();
 }
-// eslint-disable-next-line no-unused-vars
-function shadowsocksr(proxy) {
-    const external_proxy = {
-        ...proxy,
-        type: 'external',
-        exec: proxy.exec || '/usr/local/bin/ssr-local',
-        'local-port': '__SubStoreLocalPort__',
-        args: [],
-        addresses: [],
-        'local-address':
-            proxy.local_address ?? proxy['local-address'] ?? '127.0.0.1',
-    };
 
-    // https://manual.nssurge.com/policy/external-proxy.html
-    if (isIP(proxy.server)) {
-        external_proxy.addresses.push(proxy.server);
-    } else {
-        $.log(
-            `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
-        );
-    }
-
-    for (const [key, value] of Object.entries({
-        cipher: '-m',
-        obfs: '-o',
-        'obfs-param': '-g',
-        password: '-k',
-        port: '-p',
-        protocol: '-O',
-        'protocol-param': '-G',
-        server: '-s',
-        'local-port': '-l',
-        'local-address': '-b',
-    })) {
-        if (external_proxy[key] != null) {
-            external_proxy.args.push(value);
-            external_proxy.args.push(external_proxy[key]);
-        }
-    }
-
-    return external(external_proxy);
-}
-// eslint-disable-next-line no-unused-vars
 function mihomo(proxy, type, opts) {
     const clashProxy = ClashMeta_Producer().produce([proxy], 'internal')?.[0];
     if (clashProxy) {
@@ -178,12 +127,14 @@ function mihomo(proxy, type, opts) {
         if (isIP(proxy.server)) {
             external_proxy.addresses.push(proxy.server);
         } else {
-            $.log(
-                `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}`,
+            $.info(
+                `Platform ${targetPlatform}, proxy type ${proxy.type}: addresses should be an IP address, but got ${proxy.server}. Resolving hostname will be handled by mihomo.`,
             );
         }
         opts.localPort = localPort - 1;
         return external(external_proxy);
+    } else {
+        throw new Error(`Failed to convert ${proxy.name} (${proxy.type}) to ClashMeta format`);
     }
 }
 
