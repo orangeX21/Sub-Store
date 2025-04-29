@@ -12,7 +12,7 @@ export default function URI_Producer() {
         delete proxy.resolved;
         delete proxy['no-resolve'];
         for (const key in proxy) {
-            if (proxy[key] == null || /^_/i.test(key)) {
+            if (proxy[key] == null) {
                 delete proxy[key];
             }
         }
@@ -478,7 +478,7 @@ export default function URI_Producer() {
                             hysteriaParams.push(`obfsParam=${proxy[key]}`);
                         } else if (['sni'].includes(key)) {
                             hysteriaParams.push(`peer=${proxy[key]}`);
-                        } else if (proxy[key]) {
+                        } else if (proxy[key] && !/^_/i.test(key)) {
                             hysteriaParams.push(
                                 `${i}=${encodeURIComponent(proxy[key])}`,
                             );
@@ -535,7 +535,13 @@ export default function URI_Producer() {
                                 proxy[key]
                             ) {
                                 tuicParams.push(`${i.replace(/-/g, '_')}=1`);
-                            } else if (proxy[key]) {
+                            } else if (
+                                ['congestion-controller'].includes(key)
+                            ) {
+                                tuicParams.push(
+                                    `congestion_control=${proxy[key]}`,
+                                );
+                            } else if (proxy[key] && !/^_/i.test(key)) {
                                 tuicParams.push(
                                     `${i.replace(
                                         /-/g,
@@ -583,7 +589,11 @@ export default function URI_Producer() {
                             if (proxy[key]) {
                                 anytlsParams.push(`insecure=1`);
                             }
-                        } else if (proxy[key]) {
+                        } else if (['udp'].includes(key)) {
+                            if (proxy[key]) {
+                                anytlsParams.push(`udp=1`);
+                            }
+                        } else if (proxy[key] && !/^_/i.test(key)) {
                             anytlsParams.push(
                                 `${i.replace(/-/g, '_')}=${encodeURIComponent(
                                     proxy[key],
@@ -620,7 +630,7 @@ export default function URI_Producer() {
                             if (proxy[key]) {
                                 wireguardParams.push(`${key}=1`);
                             }
-                        } else if (proxy[key]) {
+                        } else if (proxy[key] && !/^_/i.test(key)) {
                             wireguardParams.push(
                                 `${key}=${encodeURIComponent(proxy[key])}`,
                             );

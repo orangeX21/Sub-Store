@@ -31,6 +31,21 @@ const smuxParser = (smux, proxy) => {
     if (smux['min-streams'])
         proxy.multiplex.min_streams = parseInt(`${smux['min-streams']}`, 10);
     if (smux.padding) proxy.multiplex.padding = true;
+    if (smux['brutal-opts']?.up || smux['brutal-opts']?.down) {
+        proxy.multiplex.brutal = {
+            enabled: true,
+        };
+        if (smux['brutal-opts']?.up)
+            proxy.multiplex.brutal.up_mbps = parseInt(
+                `${smux['brutal-opts']?.up}`,
+                10,
+            );
+        if (smux['brutal-opts']?.down)
+            proxy.multiplex.brutal.down_mbps = parseInt(
+                `${smux['brutal-opts']?.down}`,
+                10,
+            );
+    }
 };
 
 const wsParser = (proxy, parsedProxy) => {
@@ -359,7 +374,16 @@ const ssParser = (proxy = {}) => {
     if (parsedProxy.server_port < 0 || parsedProxy.server_port > 65535)
         throw 'invalid port';
     if (proxy.uot) parsedProxy.udp_over_tcp = true;
-    if (proxy['udp-over-tcp']) parsedProxy.udp_over_tcp = true;
+    if (proxy['udp-over-tcp']) {
+        parsedProxy.udp_over_tcp = {
+            enabled: true,
+            version:
+                !proxy['udp-over-tcp-version'] ||
+                proxy['udp-over-tcp-version'] === 1
+                    ? 1
+                    : 2,
+        };
+    }
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     networkParser(proxy, parsedProxy);
     tfoParser(proxy, parsedProxy);
@@ -543,12 +567,13 @@ const hysteriaParser = (proxy = {}) => {
     if (proxy['fast-open']) parsedProxy.udp_fragment = true;
     // eslint-disable-next-line no-control-regex
     const reg = new RegExp('^[0-9]+[ \t]*[KMGT]*[Bb]ps$');
-    if (reg.test(`${proxy.up}`)) {
+    // sing-box 跟文档不一致, 但是懒得全转, 只处理最常见的 Mbps
+    if (reg.test(`${proxy.up}`) && !`${proxy.up}`.endsWith('Mbps')) {
         parsedProxy.up = `${proxy.up}`;
     } else {
         parsedProxy.up_mbps = parseInt(`${proxy.up}`, 10);
     }
-    if (reg.test(`${proxy.down}`)) {
+    if (reg.test(`${proxy.down}`) && !`${proxy.down}`.endsWith('Mbps')) {
         parsedProxy.down = `${proxy.down}`;
     } else {
         parsedProxy.down_mbps = parseInt(`${proxy.down}`, 10);

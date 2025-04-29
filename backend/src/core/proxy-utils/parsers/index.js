@@ -128,13 +128,13 @@ function URI_SS() {
         // parse url
         let content = line.split('ss://')[1];
 
+        let name = line.split('#')[1];
         const proxy = {
-            name: decodeURIComponent(line.split('#')[1]),
             type: 'ss',
         };
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
-        let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        let serverAndPortArray = content.match(/@([^/?]*)(\/|\?|$)/);
 
         let rawUserInfoStr = decodeURIComponent(content.split('@')[0]); // 其实应该分隔之后, 用户名和密码再 decodeURIComponent. 但是问题不大
         let userInfoStr;
@@ -260,6 +260,10 @@ function URI_SS() {
         if (/(&|\?)tfo=(1|true)/i.test(query)) {
             proxy.tfo = true;
         }
+        if (name != null) {
+            name = decodeURIComponent(name);
+        }
+        proxy.name = name ?? `SS ${proxy.server}:${proxy.port}`;
         return proxy;
     };
     return { name, test, parse };
@@ -452,8 +456,12 @@ function URI_VMess() {
                 );
             }
             // https://github.com/2dust/v2rayN/wiki/%E5%88%86%E4%BA%AB%E9%93%BE%E6%8E%A5%E6%A0%BC%E5%BC%8F%E8%AF%B4%E6%98%8E(ver-2)
-            if (proxy.tls && params.sni && params.sni !== '') {
-                proxy.sni = params.sni;
+            if (proxy.tls) {
+                if (params.sni && params.sni !== '') {
+                    proxy.sni = params.sni;
+                } else if (params.peer && params.peer !== '') {
+                    proxy.sni = params.peer;
+                }
             }
             let httpupgrade = false;
             // handle obfs
@@ -744,6 +752,8 @@ function URI_AnyTLS() {
                 proxy[key] = value ? value.split(',') : undefined;
             } else if (['insecure'].includes(key)) {
                 proxy['skip-cert-verify'] = /(TRUE)|1/i.test(value);
+            } else if (['udp'].includes(key)) {
+                proxy[key] = /(TRUE)|1/i.test(value);
             } else {
                 proxy[key] = value;
             }
@@ -962,6 +972,9 @@ function URI_TUIC() {
                 proxy.tfo = true;
             } else if (['disable-sni', 'reduce-rtt'].includes(key)) {
                 proxy[key] = /(TRUE)|1/i.test(value);
+            } else if (key === 'congestion-control') {
+                proxy['congestion-controller'] = value;
+                delete proxy[key];
             } else {
                 proxy[key] = value;
             }

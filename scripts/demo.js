@@ -13,7 +13,11 @@ function operator(proxies = [], targetPlatform, context) {
   // 5. `_subName` 为单条订阅名, `_subDisplayName` 为单条订阅显示名
   // 6. `_collectionName` 为组合订阅名, `_collectionDisplayName` 为组合订阅显示名
   // 7. `tls-fingerprint` 为 tls 指纹
-  // 8. `underlying-proxy` 为前置代理
+  // 8. `underlying-proxy` 为前置代理, 不同平台会自动转换
+  //    只给 mihomo 输出的话, `dialer-proxy` 也行
+  //    只给 sing-box 输出的话, `detour` 也行
+  //    只给 egern 输出的话, `prev_hop` 也行
+  //    输出到 Clash/Stash/Shadowrocket 时, 会过滤掉配置了前置代理的节点, 并提示使用对应的功能.
   // 9. `trojan`, `tuic`, `hysteria`, `hysteria2`, `juicity` 会在解析时设置 `tls`: true (会使用 tls 类协议的通用逻辑),  输出时删除
   // 10. `sni` 在某些协议里会自动与 `servername` 转换
   // 11. 读取节点的 ca-str 和 _ca (后端文件路径) 字段, 自动计算 fingerprint (参考 https://t.me/zhetengsha/1512)
@@ -22,6 +26,7 @@ function operator(proxies = [], targetPlatform, context) {
   // 14. `ports` 为端口跳跃, `hop-interval` 变换端口号的时间间隔
   // 15. `ip-version` 设置节点使用 IP 版本，可选：dual，ipv4，ipv6，ipv4-prefer，ipv6-prefer. 会进行内部转换, 若无法匹配则使用原始值
   // 16. `sing-box` 支持使用 `_network` 来设置 `network`, 例如 `tcp`, `udp`
+  // 17. `block-quic` 支持 `auto`, `on`, `off`. 不同的平台不一定都支持, 会自动转换
 
   // require 为 Node.js 的 require, 在 Node.js 运行环境下 可以用来引入模块
   // 例如在 Node.js 环境下, 将文件内容写入 /tmp/1.txt 文件
@@ -89,6 +94,12 @@ function operator(proxies = [], targetPlatform, context) {
 
   // 其他平台同理, 持久化缓存数据在 JSON 里
 
+  // 当配合脚本使用时, 可以在脚本的前面添加一个脚本操作, 实现保留 1 小时的缓存. 这样比较灵活
+
+  // async function operator() {
+  //     scriptResourceCache._cleanup(undefined, 1 * 3600 * 1000);
+  // }
+
   // ProxyUtils 为节点处理工具
   // 可参考 https://t.me/zhetengsha/1066
   // const ProxyUtils = {
@@ -106,6 +117,7 @@ function operator(proxies = [], targetPlatform, context) {
   //     getISO, // 获取 ISO 3166-1 alpha-2 代码
   //     Gist, // Gist 类
   //     download, // 内部的下载方法, 见 backend/src/utils/download.js
+  //     downloadFile, // 下载二进制文件, 见 backend/src/utils/download.js
   //     MMDB, // Node.js 环境 可用于模拟 Surge/Loon 的 $utils.ipasn, $utils.ipaso, $utils.geoip. 具体见 https://t.me/zhetengsha/1269
   //     isValidUUID, // 辅助判断是否为有效的 UUID
   // }
