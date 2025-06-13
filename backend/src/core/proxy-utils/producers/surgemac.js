@@ -14,8 +14,11 @@ export default function SurgeMac_Producer() {
         switch (proxy.type) {
             case 'external':
                 return external(proxy);
-            // case 'ssr':
-            //     return shadowsocksr(proxy);
+            // case 'vmess':
+            case 'vless':
+                return mihomo(proxy, type, opts);
+            case 'ss':
+                return shadowsocksr(proxy, type, opts);
             default: {
                 try {
                     return surge_Producer.produce(proxy, type, opts);
@@ -77,7 +80,10 @@ function external(proxy) {
     return result.toString();
 }
 // eslint-disable-next-line no-unused-vars
-function shadowsocksr(proxy) {
+function shadowsocksr(proxy, type, opts = {}) {
+    if (opts.useMihomoExternal) {
+        return mihomo(proxy, type, opts);
+    }
     const external_proxy = {
         ...proxy,
         type: 'external',
@@ -151,8 +157,9 @@ function mihomo(proxy, type, opts) {
                             nameserver: opts?.nameserver ||
                                 proxy._nameserver || [
                                     'https://doh.pub/dns-query',
-                                    'https://dns.alidns.com/dns-query',
+                                    'https://147857.alidns.com/dns-query',
                                     'https://doh-pure.onedns.net/dns-query',
+                                    'https://dh-dns.global-idt.net/dns-query',
                                 ],
                         },
                         proxies: [
