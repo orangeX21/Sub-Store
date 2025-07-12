@@ -1,12 +1,20 @@
 import { isPresent } from '@/core/proxy-utils/producers/utils';
 
+const ipVersions = {
+    dual: 'dual',
+    'v4-only': 'ipv4',
+    'v6-only': 'ipv6',
+    'prefer-v4': 'ipv4-prefer',
+    'prefer-v6': 'ipv6-prefer',
+};
+
 export default function ClashMeta_Producer() {
     const type = 'ALL';
     const produce = (proxies, type, opts = {}) => {
         const list = proxies
             .filter((proxy) => {
                 if (opts['include-unsupported-proxy']) return true;
-                if (proxy.type === 'snell' && String(proxy.version) === '4') {
+                if (proxy.type === 'snell' && proxy.version >= 4) {
                     return false;
                 } else if (['juicity'].includes(proxy.type)) {
                     return false;
@@ -241,6 +249,11 @@ export default function ClashMeta_Producer() {
                 ) {
                     delete proxy[`${proxy.network}-opts`]['_grpc-type'];
                     delete proxy[`${proxy.network}-opts`]['_grpc-authority'];
+                }
+
+                if (proxy['ip-version']) {
+                    proxy['ip-version'] =
+                        ipVersions[proxy['ip-version']] || proxy['ip-version'];
                 }
                 return proxy;
             });
